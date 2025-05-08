@@ -1,16 +1,69 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JsRuntime
+@implements IDisposable
 
 <div class="page">
-    <div class="sidebar">
+    <aside class="sidebar" id="draggable-sidebar">
+        <div class="resize-handle"></div>
         <NavMenu />
-    </div>
+    </aside>
 
     <main>
-        <div class="top-row px-4">
-        </div>
+        <header class="top-row">
+            <!-- Light / Dark Mode -->
+            <button class="theme-toggle" title="切换主题">
+                <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="4" fill="#7c3aed" />
+                    <path d="M12 3v2m0 14v2M5.64 5.64l1.42 1.42m9.9 9.9l1.42 1.42M3 12h2m14 0h2M5.64 18.36l1.42-1.42m9.9-9.9l1.42-1.42"
+                          stroke="#7c3aed"
+                          stroke-width="2"
+                          stroke-linecap="round" />
+                </svg>
+
+                <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M12 22c5.523 0 10-4.477 10-10 0-.463-.694-.54-.933-.143a6.5 6.5 0 1 1-8.924-8.924C12.54 2.693 12.463 2 12 2 6.477 2 2 6.477 2 12s4.477 10 10 10z"
+                          stroke="#7c3aed"
+                          stroke-width="2"
+                          stroke-linecap="round" />
+                </svg>
+            </button>
+
+            <!-- Github Link -->
+            <a class="top-link" href="https://github.com/wubing7755/AWComponent?" target="_blank">
+                <span class="link-icon"></span>
+                <span class="link-text">GitHub</span>
+            </a>
+        </header>
 
         <article class="content px-4">
             @Body
         </article>
     </main>
 </div>
+
+
+@code {
+    private IJSObjectReference? _module;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 加载统一管理模块
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./js/scriptsInOne.js"
+            );
+
+            await _module.InvokeVoidAsync("ScriptsInOne.initialize");
+        }
+    }
+
+    public async void Dispose()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
+    }
+}

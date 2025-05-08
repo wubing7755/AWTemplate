@@ -1,81 +1,220 @@
 .page {
-    position: relative;
+    /*
+     * 全局样式
+     *     ① CSS变量
+     *     ② 颜色配置
+     *     ③ 宽高配置 
+     */
+    /* 主题色：紫色 */
+    --primary-50: #f5f3ff;
+    --primary-100: #ede9fe;
+    --primary-200: #ddd6fe;
+    --primary-300: #c4b5fd;
+    --primary-400: #a78bfa;
+    --primary-500: #8b5cf6;
+    --primary-600: #7c3aed;
+    --primary-700: #6d28d9;
+    --primary-800: #5b21b6;
+    --primary-900: #4c1d95;
+    /* 功能颜色 */
+    --glass-bg: rgba(243, 240, 255, 0.96);
+    --glass-border: rgba(112, 72, 232, 0.12);
+    --surface-1: #ffffff;
+    --surface-2: #f8f9fa;
+    --text-primary: var(--primary-900);
+    --text-secondary: #4a5568;
+    /* 侧边栏 宽度 */
+    --sidebar-width: 250px;
+    /* 左上角图标 高度 */
+    --navbar-height: 3.75rem;
+    /* 顶部导航栏 高度 */
+    --toprow-height: 3.75rem;
+    /* 拖拽条 宽度 */
+    --resize-width: 3px;
+    /* 菜单项 间距 */
+    --menu-spacing: 1.5rem;
+    /* 菜单项 图标 */
+    --icon-size: 1.25rem;
     display: flex;
-    flex-direction: column;
-}
-
-main {
-    flex: 1;
+    min-height: 100vh;
+    background-color: var(--surface-2);
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    /*
+     * 侧边栏
+     */
+
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    background: var(--glass-bg);
+    border-right-color: var(--glass-border);
+    box-shadow: 8px 0 24px rgba(var(--primary-900), 0.08);
+    border-right: 1px solid var(--glass-border);
+    z-index: 1000;
+    /* 提前告知浏览器优化 */
+    will-change: width;
+    transition: width 0.2s cubic-bezier(0.33, 1, 0.68, 1);
+    /* 强制GPU加速 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.resize-handle {
+    /*
+     * 拖拽条 
+     */
+
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--resize-width);
+    cursor: col-resize;
+    background-color: rgba(var(--primary-600), 0.1);
+    transition: background-color 0.2s;
+}
+
+    .resize-handle:hover {
+        background-color: var(--primary-400);
+    }
+
+main {
+    /*
+     * 主区域
+     */
+
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    background-color: var(--surface-1);
+    transition: margin-left 0.2s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 .top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
-    justify-content: flex-end;
-    height: 3.5rem;
+    /*
+     * 顶部导航栏
+     */
+
     display: flex;
+    height: var(--toprow-height);
     align-items: center;
+    padding: 0 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    /* 内容靠右显示 */
+    justify-content: flex-end;
+    background: var(--glass-bg);
+    border-bottom: 1px solid var(--glass-border);
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
+.theme-toggle {
+    /*
+     * 主题切换按钮
+     */
+    --icon-size: 24px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    margin-right: 12px;
+}
+
+    .theme-toggle:hover {
+        opacity: 1;
     }
 
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
+    .theme-toggle svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        fill: currentColor;
     }
 
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-@media (max-width: 640.98px) {
-    .top-row:not(.auth) {
+    .theme-toggle .sun {
         display: none;
     }
 
-    .top-row.auth {
-        justify-content: space-between;
+    .theme-toggle .moon {
+        display: block;
     }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        margin-left: 0;
+[data-theme="light"] .theme-toggle .sun {
+    display: block;
+}
+
+[data-theme="light"] .theme-toggle .moon {
+    display: none;
+}
+
+.top-link {
+    /*
+     * Github Link
+     */
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+    .top-link :hover {
+        color: var(--primary-600);
+    }
+
+.link-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>');
+    margin-right: 8px;
+}
+
+.content {
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+}
+
+@media (max-width: 768px) {
+    /*
+     * 页面缩放
+     */
+    .sidebar {
+        width: 200px;
+        backdrop-filter: blur(12px);
+    }
+
+    main {
+        margin-left: 200px;
     }
 }
 
-@media (min-width: 641px) {
-    .page {
-        flex-direction: row;
-    }
+[data-theme="dark"] .page {
+    --glass-bg: rgba(17, 24, 39, 0.98);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --surface-1: rgba(31, 41, 55, 1);
+    --surface-2: rgba(17, 24, 39, 1);
+    --text-primary: var(--primary-200);
+    --text-secondary: rgba(203, 213, 225, 1);
+    background-color: var(--glass-bg);
+}
 
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-    }
+[data-theme="dark"] .sidebar {
+    background: var(--glass-bg);
+    border-right-color: var(--glass-border);
+}
 
-    .top-row {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
+[data-theme="dark"] .top-row {
+    background: var(--glass-bg);
+    border-bottom-color: var(--glass-border);
+}
 
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
-    }
+[data-theme="dark"] .nav-menu {
+    background: rgba(var(--surface-1), 0.98);
+}
 
-    .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
-    }
+[data-theme="dark"] .nav-link.active {
+    background: linear-gradient( 135deg, var(--primary-700) 0%, var(--primary-500) 100% );
 }
