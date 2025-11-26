@@ -3,12 +3,15 @@
 @implements IDisposable
 
 <div class="page">
-    <aside class="sidebar" id="draggable-sidebar">
-        <div class="resize-handle"></div>
+    <aside class="sidebar" id="left-sidebar">
         <NavMenu />
     </aside>
 
-    <main>
+    <div id="resize-handle" class="sash-container" data-resize="left">
+        <div class="sash"></div>
+    </div>
+    
+    <main id="main">
         <header class="top-row">
             <!-- Light / Dark Mode -->
             <button class="theme-toggle" title="切换主题">
@@ -52,7 +55,7 @@
             // 加载统一管理模块
             _module = await JsRuntime.InvokeAsync<IJSObjectReference>(
                 "import",
-                "./js/scriptsInOne.js"
+                "/js/main.js"
             );
 
             await _module.InvokeVoidAsync("ScriptsInOne.initialize");
