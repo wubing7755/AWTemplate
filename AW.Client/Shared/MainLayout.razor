@@ -1,6 +1,5 @@
-﻿@inherits LayoutComponentBase
-@inject IJSRuntime JsRuntime
-@implements IDisposable
+@inherits LayoutComponentBase
+@inject IJsInteropService JsInterop
 
 <div class="page">
     <aside class="sidebar" id="left-sidebar">
@@ -10,7 +9,7 @@
     <div id="resize-handle" class="sash-container" data-resize="left">
         <div class="sash"></div>
     </div>
-    
+
     <main id="main">
         <header class="top-row">
             <!-- Light / Dark Mode -->
@@ -46,27 +45,30 @@
 
 
 @code {
-    private IJSObjectReference? _module;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // 加载统一管理模块
-            _module = await JsRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "/js/main.js"
-            );
-
-            await _module.InvokeVoidAsync("ScriptsInOne.initialize");
+            await InitializeScriptsWithRetryAsync();
         }
     }
 
-    public async void Dispose()
+    private async Task InitializeScriptsWithRetryAsync(int maxRetries = 3, int delayMs = 1000)
     {
-        if (_module is not null)
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            await _module.DisposeAsync();
+            try
+            {
+                await JsInterop.InvokeVoidAsync(JsFunctionNames.InitializeAllScripts);
+                return; // 成功则返回
+            }
+            catch (JSException ex)
+            {
+                if (attempt == maxRetries)
+                    throw;
+
+                await Task.Delay(delayMs * attempt); // 递增延迟
+            }
         }
     }
 }
