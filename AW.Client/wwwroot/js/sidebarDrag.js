@@ -16,18 +16,20 @@ class ResizablePanel {
             this.startPos = this.isHorizontal ? e.clientX : e.clientY;
             const rect = this.panel.getBoundingClientRect();
             this.startSize = this.isHorizontal ? rect.width : rect.height;
-            document.body.style.cursor = this.isHorizontal ? 'col-resize' : 'row-resize';
-            document.body.style.userSelect = 'none';
-            document.addEventListener('pointermove', this.onPointerMove);
-            document.addEventListener('pointerup', this.onPointerUp);
-            document.addEventListener('pointercancel', this.onPointerUp);
+            document.body.style.cursor = this.isHorizontal
+                ? "col-resize"
+                : "row-resize";
+            document.body.style.userSelect = "none";
+            document.addEventListener("pointermove", this.onPointerMove);
+            document.addEventListener("pointerup", this.onPointerUp);
+            document.addEventListener("pointercancel", this.onPointerUp);
         };
         this.onPointerMove = (e) => {
             if (!this.isDragging)
                 return;
             const clientPos = this.isHorizontal ? e.clientX : e.clientY;
             let delta = clientPos - this.startPos;
-            if (this.direction === 'right' || this.direction === 'top')
+            if (this.direction === "right" || this.direction === "top")
                 delta = -delta;
             let newSize = this.startSize + delta;
             const min = this.options.minSize ?? 38;
@@ -44,23 +46,23 @@ class ResizablePanel {
             if (!this.isDragging)
                 return;
             this.isDragging = false;
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            document.removeEventListener('pointermove', this.onPointerMove);
-            document.removeEventListener('pointerup', this.onPointerUp);
-            document.removeEventListener('pointercancel', this.onPointerUp);
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            document.removeEventListener("pointermove", this.onPointerMove);
+            document.removeEventListener("pointerup", this.onPointerUp);
+            document.removeEventListener("pointercancel", this.onPointerUp);
         };
         this.handle.dataset.resize = direction;
         this.bindEvents();
     }
     bindEvents() {
-        this.handle.addEventListener('pointerdown', this.onPointerDown);
+        this.handle.addEventListener("pointerdown", this.onPointerDown);
     }
     get isHorizontal() {
-        return this.direction === 'left' || this.direction === 'right';
+        return this.direction === "left" || this.direction === "right";
     }
     dispose() {
-        this.handle.removeEventListener('pointerdown', this.onPointerDown);
+        this.handle.removeEventListener("pointerdown", this.onPointerDown);
         this.onPointerUp();
     }
 }
@@ -85,46 +87,74 @@ export const DragManager = (() => {
     return {
         init(container = document) {
             this.destroy();
-            const handles = container.querySelectorAll('[data-resize]');
-            handles.forEach(handle => {
+            const handles = container.querySelectorAll("[data-resize]");
+            handles.forEach((handle) => {
                 const direction = handle.dataset.resize;
-                if (!direction || !['left', 'right', 'bottom', 'top'].includes(direction)) {
-                    console.warn('Invalid data-resize:', direction);
+                if (!direction ||
+                    !["left", "right", "bottom", "top"].includes(direction)) {
+                    console.warn("Invalid data-resize:", direction);
                     return;
                 }
                 let panel = null;
-                if (direction === 'left' || direction === 'right') {
+                if (direction === "left" || direction === "right") {
                     panel = handle.previousElementSibling;
                     if (!panel || panel.getBoundingClientRect().width === 0) {
                         panel = handle.parentElement?.firstElementChild;
                     }
                 }
-                if (direction === 'bottom' || direction === 'top') {
+                if (direction === "bottom" || direction === "top") {
                     panel = handle.nextElementSibling;
                     if (!panel || panel.getBoundingClientRect().height === 0) {
                         panel = handle.parentElement?.querySelector('.bottom-panel, [class*="bottom"], [id*="bottom"]');
                     }
                 }
                 if (!panel) {
-                    console.warn('No panel found for resize handle:', handle);
+                    console.warn("No panel found for resize handle:", handle);
                     return;
                 }
                 const minSize = handle.dataset.minSize || panel.dataset.minSize
-                    ? Math.max(38, Number.parseInt(handle.dataset.minSize || panel.dataset.minSize || '38', 10))
+                    ? Math.max(38, Number.parseInt(handle.dataset.minSize || panel.dataset.minSize || "38", 10))
                     : 38;
                 _instances.push(new ResizablePanel(panel, handle, direction, { minSize }));
             });
             _resizeHandler = _onWindowResize;
-            window.addEventListener('resize', _resizeHandler);
+            window.addEventListener("resize", _resizeHandler);
         },
         destroy() {
-            _instances.forEach(inst => inst.dispose());
+            _instances.forEach((inst) => inst.dispose());
             _instances.length = 0;
             if (_resizeHandler) {
-                window.removeEventListener('resize', _resizeHandler);
+                window.removeEventListener("resize", _resizeHandler);
                 _resizeHandler = null;
             }
-        }
+        },
     };
 })();
+window.DragManager = DragManager;
+if (window.ModuleManager) {
+    window.ModuleManager.registerModule("sidebarDrag", {
+        description: "侧边栏拖拽功能模块",
+        initialize: function () {
+            console.log("[ModuleManager] Initializing sidebarDrag module");
+            if (window.DragManager) {
+                window.DragManager.init();
+                return true;
+            }
+            return false;
+        },
+        dispose: function () {
+            console.log("[ModuleManager] Disposing sidebarDrag module");
+            if (window.DragManager) {
+                window.DragManager.destroy();
+            }
+        },
+        autoInitialize: true,
+    });
+}
+else {
+    console.warn("ModuleManager not found, initializing sidebarDrag directly");
+    if (window.DragManager) {
+        window.DragManager.init();
+    }
+}
 //# sourceMappingURL=sidebarDrag.js.map

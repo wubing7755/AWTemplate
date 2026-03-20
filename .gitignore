@@ -369,3 +369,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# 忽略 TypeScript 编译输出目录
+/AW.Client/wwwroot/js/

@@ -1,7 +1,6 @@
-using AW.Client;
+using AW.Client.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using AW.Client.Services;
 
 namespace AW.Client
 {
@@ -14,6 +13,9 @@ namespace AW.Client
             builder.RootComponents.Add<HeadOutlet>("head::after");
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+            
+            // 注册插件服务
+            builder.Services.AddScoped<IPluginService, PluginService>();
 
             // 注册 JavaScript 互操作服务
             builder.Services.AddScoped<IJsInteropService, JsInteropService>();

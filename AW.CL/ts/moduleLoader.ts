@@ -30,41 +30,20 @@ interface ModuleLoaderConfig {
   featureModules: ModuleConfig[];
 }
 
-// 默认模块配置
+// 默认模块配置 - 简化版，只保留核心入口
 const defaultModuleConfig: ModuleLoaderConfig = {
   // 基础模块 - 总是加载
   coreModules: [
     {
-      name: "interop",
-      path: "js/interop.js",
+      name: "main",
+      path: "js/main.js",
       loadOrder: 1,
       alwaysLoad: true,
     },
-    {
-      name: "moduleManager",
-      path: "js/moduleManager.js",
-      loadOrder: 2,
-      alwaysLoad: true,
-      dependencies: ["interop"],
-    },
   ],
 
-  // 功能模块 - 根据需要加载
-  featureModules: [
-    {
-      name: "sidebarDrag",
-      path: "js/sidebarDrag.js",
-      loadOrder: 3,
-      autoInitialize: true,
-    },
-    {
-      name: "themeToggle",
-      path: "js/themeToggle.js",
-      loadOrder: 4,
-      autoInitialize: true,
-    },
-    // 后续添加新模块只需要在这里配置，不需要修改HTML
-  ],
+  // 功能模块 - 现在由 main.ts 中的 AW 插件系统管理
+  featureModules: [],
 };
 
 // 模块实例接口
