@@ -1,0 +1,23 @@
+{
+    "plugs": [
+        {
+            "name": "themeToggle",
+            "file": "js/themeToggle.js",
+            "entry": "getExports",
+            "autoInitialize": true,
+            "description": "主题切换功能插件"
+        },
+        {
+            "name": "sidebarDrag",
+            "file": "js/sidebarDrag.js",
+            "entry": "getExports",
+            "autoInitialize": true,
+            "description": "侧边栏拖拽功能插件"
+        }
+    ],
+    "options": {
+        "debug": true,
+        "loadOnDomContentLoaded": true,
+        "configPath": "plugins.json"
+    }
+}

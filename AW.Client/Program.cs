@@ -17,9 +17,6 @@ namespace AW.Client
             // 注册插件服务
             builder.Services.AddScoped<IPluginService, PluginService>();
 
-            // 注册 JavaScript 互操作服务
-            builder.Services.AddScoped<IJsInteropService, JsInteropService>();
-
             await builder.Build().RunAsync();
         }
     }

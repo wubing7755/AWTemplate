@@ -37,24 +37,39 @@ export function initThemeToggle(): void {
   }
 }
 
-// 附加到window对象全局可用
-(window as any).initThemeToggle = initThemeToggle;
+/**
+ * 插件导出函数
+ * 遵循 Plug 系统的约定接口
+ */
+function getExports() {
+    return {
+        name: "themeToggle",
+        description: "主题切换功能插件",
+        exports: {
+            initThemeToggle: initThemeToggle,
+        },
+        initialize: () => {
+            initThemeToggle();
+        },
+        dispose: () => {
+            document.documentElement.removeAttribute("data-theme");
+        },
+        autoInitialize: true,
+    };
+}
 
-// 注册到模块管理器
-if ((window as any).ModuleManager) {
-  (window as any).ModuleManager.registerModule("themeToggle", {
-    description: "主题切换功能模块",
-    initialize: function (): void {
-      console.log("[ModuleManager] Initializing themeToggle module");
-      (window as any).initThemeToggle();
-    },
-    dispose: function (): void {
-      console.log("[ModuleManager] Disposing themeToggle module");
-      document.documentElement.removeAttribute("data-theme");
-    },
-    autoInitialize: true,
-  });
-} else {
-  console.warn("ModuleManager not found, initializing themeToggle directly");
-  (window as any).initThemeToggle();
+// 导出插件入口函数
+export { getExports };
+
+// 立即执行并注册到 PlugManager（如果已加载）
+if (typeof window !== "undefined") {
+    const exports = getExports();
+    const plugManager = (window as any).PlugManager;
+    if (plugManager && typeof plugManager.registerPlug === "function") {
+        plugManager.registerPlug(exports);
+    } else {
+        // 如果 PlugManager 尚未加载，稍后手动初始化
+        (window as any).__pendingPlugs = (window as any).__pendingPlugs || [];
+        (window as any).__pendingPlugs.push(exports);
+    }
 }

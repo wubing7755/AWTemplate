@@ -130,31 +130,32 @@ export const DragManager = (() => {
         },
     };
 })();
-window.DragManager = DragManager;
-if (window.ModuleManager) {
-    window.ModuleManager.registerModule("sidebarDrag", {
-        description: "侧边栏拖拽功能模块",
-        initialize: function () {
-            console.log("[ModuleManager] Initializing sidebarDrag module");
-            if (window.DragManager) {
-                window.DragManager.init();
-                return true;
-            }
-            return false;
+function getExports() {
+    return {
+        name: "sidebarDrag",
+        description: "侧边栏拖拽功能插件",
+        exports: {
+            DragManager: DragManager,
         },
-        dispose: function () {
-            console.log("[ModuleManager] Disposing sidebarDrag module");
-            if (window.DragManager) {
-                window.DragManager.destroy();
-            }
+        initialize: () => {
+            DragManager.init();
+        },
+        dispose: () => {
+            DragManager.destroy();
         },
         autoInitialize: true,
-    });
+    };
 }
-else {
-    console.warn("ModuleManager not found, initializing sidebarDrag directly");
-    if (window.DragManager) {
-        window.DragManager.init();
+export { getExports };
+if (typeof window !== "undefined") {
+    const exports = getExports();
+    const plugManager = window.PlugManager;
+    if (plugManager && typeof plugManager.registerPlug === "function") {
+        plugManager.registerPlug(exports);
+    }
+    else {
+        window.__pendingPlugs = window.__pendingPlugs || [];
+        window.__pendingPlugs.push(exports);
     }
 }
 //# sourceMappingURL=sidebarDrag.js.map

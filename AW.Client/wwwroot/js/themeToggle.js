@@ -25,23 +25,32 @@ export function initThemeToggle() {
         console.error("Failed to initialize theme toggle:", error);
     }
 }
-window.initThemeToggle = initThemeToggle;
-if (window.ModuleManager) {
-    window.ModuleManager.registerModule("themeToggle", {
-        description: "主题切换功能模块",
-        initialize: function () {
-            console.log("[ModuleManager] Initializing themeToggle module");
-            window.initThemeToggle();
+function getExports() {
+    return {
+        name: "themeToggle",
+        description: "主题切换功能插件",
+        exports: {
+            initThemeToggle: initThemeToggle,
         },
-        dispose: function () {
-            console.log("[ModuleManager] Disposing themeToggle module");
+        initialize: () => {
+            initThemeToggle();
+        },
+        dispose: () => {
             document.documentElement.removeAttribute("data-theme");
         },
         autoInitialize: true,
-    });
+    };
 }
-else {
-    console.warn("ModuleManager not found, initializing themeToggle directly");
-    window.initThemeToggle();
+export { getExports };
+if (typeof window !== "undefined") {
+    const exports = getExports();
+    const plugManager = window.PlugManager;
+    if (plugManager && typeof plugManager.registerPlug === "function") {
+        plugManager.registerPlug(exports);
+    }
+    else {
+        window.__pendingPlugs = window.__pendingPlugs || [];
+        window.__pendingPlugs.push(exports);
+    }
 }
 //# sourceMappingURL=themeToggle.js.map

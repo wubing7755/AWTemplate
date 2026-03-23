@@ -1,5 +1,5 @@
 @inherits LayoutComponentBase
-@inject IJsInteropService JsInterop
+@inject IPluginService PluginService
 
 <div class="page">
     <aside class="sidebar" id="left-sidebar">
@@ -45,29 +45,28 @@
 
 
 @code {
+    private bool _pluginsInitialized = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_pluginsInitialized)
         {
-            await InitializeScriptsWithRetryAsync();
-        }
-    }
-
-    private async Task InitializeScriptsWithRetryAsync(int maxRetries = 3, int delayMs = 1000)
-    {
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            try
+            _pluginsInitialized = true;
+            
+            // 初始化插件系统
+            var results = await PluginService.InitializeAsync();
+            
+            // 输出调试信息
+            foreach (var result in results)
             {
-                await JsInterop.InvokeVoidAsync(JsFunctionNames.InitializeAllScripts);
-                return; // 成功则返回
-            }
-            catch (JSException ex)
-            {
-                if (attempt == maxRetries)
-                    throw;
-
-                await Task.Delay(delayMs * attempt); // 递增延迟
+                if (result.Success)
+                {
+                    Console.WriteLine($"[MainLayout] 插件 {result.Name} 初始化成功 ({result.Duration}ms)");
+                }
+                else
+                {
+                    Console.WriteLine($"[MainLayout] 插件 {result.Name} 初始化失败: {result.Error}");
+                }
             }
         }
     }

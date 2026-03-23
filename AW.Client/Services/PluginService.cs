@@ -1,188 +1,293 @@
 using Microsoft.JSInterop;
-using System.Text.Json;
 
 namespace AW.Client.Services
 {
     /// <summary>
-    /// 插件服务实现，通过IJSRuntime调用TypeScript插件系统
+    /// 插件服务实现
+    /// 提供 C# 端调用 TypeScript 插件系统的桥接能力
+    /// 采用装饰器模式封装 JS 互操作逻辑
     /// </summary>
     public class PluginService : IPluginService
     {
         private readonly IJSRuntime _jsRuntime;
-        private IJSObjectReference? _module;
-        private bool _isInitialized = false;
+        private const string PlugManagerKey = "window.PlugManager";
         
+        /// <summary>
+        /// 插件服务构造函数
+        /// </summary>
+        /// <param name="jsRuntime">JavaScript 运行时</param>
         public PluginService(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
         }
-        
-        /// <summary>
-        /// 确保插件系统已初始化
-        /// </summary>
-        private async Task EnsureInitializedAsync()
+
+        // ==================== 生命周期管理 ====================
+
+        /// <inheritdoc />
+        public async Task<PlugInitResult[]> InitializeAsync(string? configPath = null)
         {
-            if (_isInitialized) return;
-            
             try
             {
-                // 导入主模块
-                _module = await _jsRuntime.InvokeAsync<IJSObjectReference>(
-                    "import", 
-                    "/js/main.js"
-                );
-                
-                // 注意：AWScriptManager.initialize() 不再由插件服务调用
-                // 初始化逻辑现在由C#端通过插件系统按需调用
-                _isInitialized = true;
+                var path = configPath ?? "plugins.json";
+                var results = await _jsRuntime.InvokeAsync<PlugInitResult[]>(
+                    $"{PlugManagerKey}.loadConfigFromUrl", path);
+                return results ?? Array.Empty<PlugInitResult>();
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("Failed to initialize plugin system", ex);
+                LogError("InitializeAsync", ex);
+                return Array.Empty<PlugInitResult>();
             }
         }
-        
-        public async Task InvokeVoidAsync(string pluginName, string methodName, params object?[] args)
+
+        /// <inheritdoc />
+        public async Task<PlugInitResult> InitializePlugAsync(string plugName)
         {
-            await EnsureInitializedAsync();
-            
             try
             {
-                // 调用插件方法
-                await _module!.InvokeVoidAsync(
-                    "AW.invokePlugin",
-                    pluginName,
-                    methodName,
-                    args
-                );
+                return await _jsRuntime.InvokeAsync<PlugInitResult>(
+                    $"{PlugManagerKey}.initializePlug", plugName);
             }
-            catch (JSException jsEx)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException(
-                    $"Failed to invoke plugin method {pluginName}.{methodName}: {jsEx.Message}",
-                    jsEx
-                );
+                LogError($"InitializePlugAsync({plugName})", ex);
+                return new PlugInitResult 
+                { 
+                    Name = plugName, 
+                    Success = false, 
+                    Error = ex.Message 
+                };
             }
         }
-        
-        public async Task<TValue> InvokeAsync<TValue>(string pluginName, string methodName, params object?[] args)
+
+        /// <inheritdoc />
+        public async Task DisposePlugAsync(string plugName)
         {
-            await EnsureInitializedAsync();
-            
             try
             {
-                // 调用插件方法并返回结果
-                return await _module!.InvokeAsync<TValue>(
-                    "AW.invokePlugin",
-                    pluginName,
-                    methodName,
-                    args
-                );
+                await _jsRuntime.InvokeVoidAsync(
+                    $"{PlugManagerKey}.disposePlug", plugName);
             }
-            catch (JSException jsEx)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException(
-                    $"Failed to invoke plugin method {pluginName}.{methodName}: {jsEx.Message}",
-                    jsEx
-                );
+                LogError($"DisposePlugAsync({plugName})", ex);
             }
         }
-        
-        public async Task InvokeGlobalVoidAsync(string functionName, params object?[] args)
+
+        /// <inheritdoc />
+        public async Task DisposeAllAsync()
         {
-            await EnsureInitializedAsync();
-            
             try
             {
-                // 构建函数调用路径
-                var functionPath = functionName.Split('.');
-                if (functionPath.Length == 1)
-                {
-                    await _jsRuntime.InvokeVoidAsync(functionName, args);
-                }
-                else
-                {
-                    // 对于嵌套路径，使用 window[path1][path2]...
-                    await _module!.InvokeVoidAsync(
-                        "AW.invokeGlobalFunction",
-                        functionName,
-                        args
-                    );
-                }
+                await _jsRuntime.InvokeVoidAsync($"{PlugManagerKey}.disposeAll");
             }
-            catch (JSException jsEx)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException(
-                    $"Failed to invoke global function {functionName}: {jsEx.Message}",
-                    jsEx
-                );
+                LogError("DisposeAllAsync", ex);
             }
         }
-        
-        public async Task<TValue> InvokeGlobalAsync<TValue>(string functionName, params object?[] args)
+
+        // ==================== 插件信息查询 ====================
+
+        /// <inheritdoc />
+        public async Task<bool> HasPlugAsync(string plugName)
         {
-            await EnsureInitializedAsync();
-            
             try
             {
-                // 构建函数调用路径
-                var functionPath = functionName.Split('.');
-                if (functionPath.Length == 1)
-                {
-                    return await _jsRuntime.InvokeAsync<TValue>(functionName, args);
-                }
-                else
-                {
-                    // 对于嵌套路径，使用 window[path1][path2]...
-                    return await _module!.InvokeAsync<TValue>(
-                        "AW.invokeGlobalFunction",
-                        functionName,
-                        args
-                    );
-                }
-            }
-            catch (JSException jsEx)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to invoke global function {functionName}: {jsEx.Message}",
-                    jsEx
-                );
-            }
-        }
-        
-        public async Task<bool> PluginExistsAsync(string pluginName)
-        {
-            await EnsureInitializedAsync();
-            
-            try
-            {
-                return await _module!.InvokeAsync<bool>(
-                    "AW.pluginExists",
-                    pluginName
-                );
+                return await _jsRuntime.InvokeAsync<bool>(
+                    $"{PlugManagerKey}.hasPlug", plugName);
             }
             catch
             {
                 return false;
             }
         }
-        
-        public async Task<bool> MethodExistsAsync(string pluginName, string methodName)
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<PlugInfo>> GetPlugInfosAsync()
         {
-            await EnsureInitializedAsync();
-            
             try
             {
-                return await _module!.InvokeAsync<bool>(
-                    "AW.methodExists",
-                    pluginName,
-                    methodName
-                );
+                // 调用 PlugDebug.logPlugs 的内部逻辑获取插件信息
+                var jsCode = $@"
+                    (function() {{
+                        var plugs = {PlugManagerKey}.getPlugNames();
+                        return plugs.map(function(name) {{
+                            var plug = {PlugManagerKey}.getPlug(name);
+                            return {{
+                                Name: name,
+                                Description: plug?.description || '',
+                                AutoInitialize: plug?.autoInitialize || false,
+                                HasInitialize: typeof plug?.initialize === 'function',
+                                HasDispose: typeof plug?.dispose === 'function'
+                            }};
+                        }});
+                    }})()
+                ";
+                
+                var result = await _jsRuntime.InvokeAsync<List<PlugInfo>>("eval", jsCode);
+                return result ?? new List<PlugInfo>();
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                LogError("GetPlugInfosAsync", ex);
+                return Array.Empty<PlugInfo>();
             }
+        }
+
+        /// <inheritdoc />
+        public async Task<PlugManagerStatus> GetStatusAsync()
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<PlugManagerStatus>(
+                    $"{PlugManagerKey}.getStatus");
+            }
+            catch (Exception ex)
+            {
+                LogError("GetStatusAsync", ex);
+                return new PlugManagerStatus();
+            }
+        }
+
+        // ==================== 插件方法调用 ====================
+
+        /// <inheritdoc />
+        public async Task InvokePlugVoidAsync(string plugName, string methodName = "initialize", params object?[] args)
+        {
+            try
+            {
+                var jsCode = $@"
+                    (function() {{
+                        var plug = {PlugManagerKey}.getPlug('{plugName}');
+                        if (plug && typeof plug.{methodName} === 'function') {{
+                            return plug.{methodName}({ToJsArgs(args)});
+                        }}
+                    }})()
+                ";
+                await _jsRuntime.InvokeVoidAsync("eval", jsCode);
+            }
+            catch (Exception ex)
+            {
+                LogError($"InvokePlugVoidAsync({plugName}.{methodName})", ex);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<TValue?> InvokePlugAsync<TValue>(string plugName, string methodName, params object?[] args)
+        {
+            try
+            {
+                var jsCode = $@"
+                    (function() {{
+                        var plug = {PlugManagerKey}.getPlug('{plugName}');
+                        if (plug && typeof plug.{methodName} === 'function') {{
+                            return plug.{methodName}({ToJsArgs(args)});
+                        }}
+                    }})()
+                ";
+                return await _jsRuntime.InvokeAsync<TValue>("eval", jsCode);
+            }
+            catch (Exception ex)
+            {
+                LogError($"InvokePlugAsync({plugName}.{methodName})", ex);
+                return default;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task InvokeDisposeAsync(string plugName)
+        {
+            await InvokePlugVoidAsync(plugName, "dispose");
+        }
+
+        // ==================== 动态调用 ====================
+
+        /// <inheritdoc />
+        public async Task<TValue?> InvokeWindowAsync<TValue>(string objectName, string methodName, params object?[] args)
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<TValue>(
+                    $"window.{objectName}.{methodName}", args);
+            }
+            catch (Exception ex)
+            {
+                LogError($"InvokeWindowAsync({objectName}.{methodName})", ex);
+                return default;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task InvokeWindowVoidAsync(string objectName, string methodName, params object?[] args)
+        {
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync(
+                    $"window.{objectName}.{methodName}", args);
+            }
+            catch (Exception ex)
+            {
+                LogError($"InvokeWindowVoidAsync({objectName}.{methodName})", ex);
+            }
+        }
+
+        // ==================== 私有辅助方法 ====================
+
+        /// <summary>
+        /// 将 C# 参数数组转换为 JavaScript 代码
+        /// </summary>
+        private static string ToJsArgs(object?[] args)
+        {
+            if (args == null || args.Length == 0) return "";
+            
+            var jsArgs = new List<string>();
+            foreach (var arg in args)
+            {
+                if (arg == null)
+                {
+                    jsArgs.Add("null");
+                }
+                else if (arg is string str)
+                {
+                    jsArgs.Add($"'{EscapeJsString(str)}'");
+                }
+                else if (arg is bool b)
+                {
+                    jsArgs.Add(b ? "true" : "false");
+                }
+                else if (arg is int or long or float or double or decimal)
+                {
+                    jsArgs.Add(arg.ToString() ?? "0");
+                }
+                else
+                {
+                    // 其他类型序列化为 JSON
+                    jsArgs.Add($"JSON.parse('{EscapeJsString(System.Text.Json.JsonSerializer.Serialize(arg))}')");
+                }
+            }
+            return string.Join(", ", jsArgs);
+        }
+
+        /// <summary>
+        /// 转义 JavaScript 字符串
+        /// </summary>
+        private static string EscapeJsString(string str)
+        {
+            return str
+                .Replace("\\", "\\\\")
+                .Replace("'", "\\'")
+                .Replace("\n", "\\n")
+                .Replace("\r", "\\r")
+                .Replace("\t", "\\t");
+        }
+
+        /// <summary>
+        /// 记录错误日志
+        /// </summary>
+        private void LogError(string method, Exception ex)
+        {
+            Console.WriteLine($"[PluginService] {method} 失败: {ex.Message}");
         }
     }
 }
